@@ -1,5 +1,201 @@
-filename template:
-operatingModes.swingModes.fanModes.json
+# Daikin IR Command Generator
 
-JSON object template:
-operatingModes-swingModes-fanModes-targetTemperature: "<IR Command>"
+This project contains scripts to generate, combine, and transform Daikin IR command JSON files.
+
+## File Naming Convention
+
+**Source files (in `src/` directory):**
+```
+operatingMode.swingMode.fanMode.json
+```
+
+**Example:** `cool.on.level1_quiet.json`
+
+## JSON Structure
+
+### Input Format (source files)
+```json
+{
+  "operatingMode-swingMode-fanMode-temperature": "IR Command Base64",
+  "cool-on-auto_quiet-16": "JgBEAQ0PDQ8NDg4ODg4OAAM...",
+  "cool-on-auto_quiet-16.5": "JgBEAQ0PDQ4ODg4ODg4OAAM..."
+}
+```
+
+### Output Format (transformed files)
+```json
+{
+  "commands": {
+    "operatingMode": {
+      "fanMode": {
+        "swingMode": {
+          "temperature": "IR Command Base64"
+        }
+      }
+    }
+  }
+}
+```
+
+**Example:**
+```json
+{
+  "commands": {
+    "cool": {
+      "auto_quiet": {
+        "on": {
+          "16": "JgBEAQ0PDQ8NDg4ODg4OAAM...",
+          "16.5": "JgBEAQ0PDQ4ODg4ODg4OAAM..."
+        }
+      }
+    }
+  }
+}
+```
+
+## Scripts
+
+### 1. `generate_template.js`
+
+Generates template keys for JSON objects and creates empty JSON files in the `src/` directory.
+
+**Usage:**
+```bash
+node generate_template.js <operatingMode> <swingMode> <fanMode>
+```
+
+**Examples:**
+```bash
+node generate_template.js cool on_power_saving night_quiet
+node generate_template.js cool on auto
+```
+
+**What it does:**
+- Generates temperature keys from 16 to 32 (0.5 increments)
+- Creates a template text file in `operatingMode/operatingMode.swingMode.fanMode.txt`
+- Creates an empty JSON file in `src/operatingMode.swingMode.fanMode.json`
+- Outputs 33 keys (16, 16.5, 17, ..., 32)
+
+### 2. `generate_fan_only_temps.js`
+
+Generates temperature variations for `fan_only.json` file. Since fan mode doesn't control temperature, all temperature variations use the same IR command value.
+
+**Usage:**
+```bash
+node generate_fan_only_temps.js
+```
+
+**What it does:**
+- Reads `src/fan_only.json`
+- For each mode (e.g., `fan_only-on-auto`, `fan_only-on-night`, etc.)
+- Generates temperature entries from 16 to 32 (0.5 increments)
+- Uses the same IR command value for all temperatures of the same mode
+- Writes the result back to `src/fan_only.json`
+- Generates: 14 modes × 33 temperatures = 462 entries total
+
+**Example output:**
+```json
+{
+  "fan_only-on-auto-16": "JgBEAQ0PDQ4ODg4ODg4OAAM...",
+  "fan_only-on-auto-16.5": "JgBEAQ0PDQ4ODg4ODg4OAAM...",
+  "fan_only-on-auto-17": "JgBEAQ0PDQ4ODg4ODg4OAAM...",
+  ...
+}
+```
+
+### 3. `combine.js`
+
+Combines and flattens all JSON files from the `src/` directory into one combined JSON file.
+
+**Usage:**
+```bash
+node combine.js [src-directory] [output-file]
+```
+
+**Examples:**
+```bash
+# Use defaults (src/ -> combined.json)
+node combine.js
+
+# Specify custom paths
+node combine.js src output/combined.json
+```
+
+**What it does:**
+- Reads all `.json` files from the source directory (default: `src/`)
+- Merges all key-value pairs into a single flat object
+- Writes the result to the output file (default: `combined.json`)
+- Warns about duplicate keys if found
+
+### 4. `generator.js`
+
+Transforms JSON files from input format to target format. Converts flat key-value pairs into nested structure.
+
+**Usage:**
+```bash
+node generator.js <input-file> [output-file]
+```
+
+**Examples:**
+```bash
+# Auto-generate output filename
+node generator.js combined.json
+
+# Specify output file
+node generator.js combined.json result/transformed.json
+```
+
+**What it does:**
+- Reads input JSON file with flat keys (e.g., `"cool-on-auto_quiet-16"`)
+- Parses keys to extract: operatingMode, swingMode, fanMode, temperature
+- Transforms into nested structure: `commands.operatingMode.fanMode.swingMode.temperature`
+- Writes transformed JSON to output file
+- If output file is not specified, creates `input-filename.transformed.json` in the same directory
+
+**Key Format:**
+- Input: `"operatingMode-swingMode-fanMode-temperature"`
+- Example: `"cool-on-auto_quiet-16"`
+- Output: `commands.cool.auto_quiet.on.16`
+
+## Workflow
+
+1. **Generate templates** (if needed):
+   ```bash
+   node generate_template.js cool on auto
+   ```
+
+2. **Fill in IR commands** in the generated JSON files in `src/` directory
+
+3. **Generate temperature variations** for fan_only mode:
+   ```bash
+   node generate_fan_only_temps.js
+   ```
+
+4. **Combine all source files**:
+   ```bash
+   node combine.js
+   ```
+
+5. **Transform to final format**:
+   ```bash
+   node generator.js combined.json result/transformed.json
+   ```
+
+## Directory Structure
+
+```
+daikin/
+├── src/                    # Source JSON files
+│   ├── cool.on.auto.json
+│   ├── cool.on.level1_quiet.json
+│   ├── fan_only.json
+│   └── ...
+├── result/                 # Transformed output files
+│   └── transformed.json
+├── combined.json           # Combined source files
+├── combine.js              # Combine script
+├── generator.js            # Transform script
+├── generate_template.js    # Template generator
+├── generate_fan_only_temps.js  # Fan-only temp generator
+└── readme.md              # This file
+```

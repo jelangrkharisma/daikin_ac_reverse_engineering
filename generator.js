@@ -5,7 +5,7 @@ const path = require('path');
  * Normalize and transform JSON files from input format to target format
  * 
  * Input format: { "operatingMode-swingMode-fanMode-temperature": "IR Command" }
- * Target format: commands.fanMode.swingMode.temperature
+ * Target format: commands.operatingMode.fanMode.swingMode.temperature
  * 
  * The script extracts all information from the JSON object keys themselves.
  */
@@ -49,16 +49,20 @@ function transformJSON(inputData) {
   for (const [key, value] of Object.entries(inputData)) {
     const normalized = normalizeKey(key);
     
-    // Build the nested structure: commands.fanMode.swingMode.temperature
-    if (!output.commands[normalized.fanMode]) {
-      output.commands[normalized.fanMode] = {};
+    // Build the nested structure: commands.operatingMode.fanMode.swingMode.temperature
+    if (!output.commands[normalized.operatingMode]) {
+      output.commands[normalized.operatingMode] = {};
     }
     
-    if (!output.commands[normalized.fanMode][normalized.swingMode]) {
-      output.commands[normalized.fanMode][normalized.swingMode] = {};
+    if (!output.commands[normalized.operatingMode][normalized.fanMode]) {
+      output.commands[normalized.operatingMode][normalized.fanMode] = {};
     }
     
-    output.commands[normalized.fanMode][normalized.swingMode][normalized.temperature] = value;
+    if (!output.commands[normalized.operatingMode][normalized.fanMode][normalized.swingMode]) {
+      output.commands[normalized.operatingMode][normalized.fanMode][normalized.swingMode] = {};
+    }
+    
+    output.commands[normalized.operatingMode][normalized.fanMode][normalized.swingMode][normalized.temperature] = value;
   }
   
   return output;
