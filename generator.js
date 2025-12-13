@@ -7,7 +7,7 @@ const path = require('path');
  * Input format: { "operatingMode-swingMode-fanMode-temperature": "IR Command" }
  * Target format: commands.fanMode.swingMode.temperature
  * 
- * Filename format: operatingMode.swingMode.fanMode.json
+ * The script extracts all information from the JSON object keys themselves.
  */
 
 function normalizeKey(key) {
@@ -40,24 +40,7 @@ function normalizeKey(key) {
   };
 }
 
-function parseFilename(filename) {
-  // Filename format: operatingMode.swingMode.fanMode.json
-  // Example: cool.on.auto_quiet.json
-  const basename = path.basename(filename, '.json');
-  const parts = basename.split('.');
-  
-  if (parts.length !== 3) {
-    throw new Error(`Invalid filename format: ${filename}. Expected format: operatingMode.swingMode.fanMode.json`);
-  }
-  
-  return {
-    operatingMode: parts[0],
-    swingMode: parts[1],
-    fanMode: parts[2]
-  };
-}
-
-function transformJSON(inputData, filenameInfo) {
+function transformJSON(inputData) {
   const output = {
     commands: {}
   };
@@ -65,14 +48,6 @@ function transformJSON(inputData, filenameInfo) {
   // Process each key-value pair in the input
   for (const [key, value] of Object.entries(inputData)) {
     const normalized = normalizeKey(key);
-    
-    // Verify the normalized values match the filename
-    if (normalized.operatingMode !== filenameInfo.operatingMode ||
-        normalized.swingMode !== filenameInfo.swingMode ||
-        normalized.fanMode !== filenameInfo.fanMode) {
-      console.warn(`Warning: Key "${key}" doesn't match filename structure. Skipping.`);
-      continue;
-    }
     
     // Build the nested structure: commands.fanMode.swingMode.temperature
     if (!output.commands[normalized.fanMode]) {
@@ -94,16 +69,10 @@ function processFile(inputPath, outputPath) {
     // Read input file
     const inputData = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
     
-    // Parse filename to get structure info
-    const filenameInfo = parseFilename(path.basename(inputPath));
-    
     console.log(`Processing: ${inputPath}`);
-    console.log(`  Operating Mode: ${filenameInfo.operatingMode}`);
-    console.log(`  Swing Mode: ${filenameInfo.swingMode}`);
-    console.log(`  Fan Mode: ${filenameInfo.fanMode}`);
     
-    // Transform the JSON
-    const outputData = transformJSON(inputData, filenameInfo);
+    // Transform the JSON (all info extracted from keys)
+    const outputData = transformJSON(inputData);
     
     // Write output file
     fs.writeFileSync(outputPath, JSON.stringify(outputData, null, 2), 'utf8');
@@ -153,7 +122,6 @@ if (require.main === module) {
 
 module.exports = {
   normalizeKey,
-  parseFilename,
   transformJSON,
   processFile
 };
