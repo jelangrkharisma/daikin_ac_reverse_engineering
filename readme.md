@@ -103,34 +103,7 @@ node generate_template.js cool on auto
 - Creates an empty JSON file in `src/operatingMode.swingMode.fanMode.json`
 - Outputs 33 keys (16, 16.5, 17, ..., 32)
 
-### 2. `generate_fan_only_temps.js`
-
-Generates temperature variations for `fan_only.json` file. Since fan mode doesn't control temperature, all temperature variations use the same IR command value.
-
-**Usage:**
-```bash
-node generate_fan_only_temps.js
-```
-
-**What it does:**
-- Reads `src/fan_only.json`
-- For each mode (e.g., `fan_only-on-auto`, `fan_only-on-night`, etc.)
-- Generates temperature entries from 16 to 32 (0.5 increments)
-- Uses the same IR command value for all temperatures of the same mode
-- Writes the result back to `src/fan_only.json`
-- Generates: 14 modes × 33 temperatures = 462 entries total
-
-**Example output:**
-```json
-{
-  "fan_only-on-auto-16": "JgBEAQ0PDQ4ODg4ODg4OAAM...",
-  "fan_only-on-auto-16.5": "JgBEAQ0PDQ4ODg4ODg4OAAM...",
-  "fan_only-on-auto-17": "JgBEAQ0PDQ4ODg4ODg4OAAM...",
-  ...
-}
-```
-
-### 3. `combine.js`
+### 1. `combine.js`
 
 Combines and flattens all JSON files from the `src/` directory into one combined JSON file.
 
@@ -154,7 +127,7 @@ node combine.js src output/combined.json
 - Writes the result to the output file (default: `combined.json`)
 - Warns about duplicate keys if found
 
-### 4. `generator.js`
+### 1. `generator.js`
 
 Transforms JSON files from input format to target format. Converts flat key-value pairs into nested structure.
 
@@ -264,20 +237,19 @@ daikin/
 │   ├── cool.on.level1_quiet.json
 │   ├── fan_only.json
 │   └── ...
-├── result/                 # Transformed output files
+├── result/                 # Transformed output files (examples)
 │   ├── transformed.json
 │   └── ftkc20tvm4.json    # Full output with metadata (generated with --full)
 ├── combined.json           # Combined source files (auto-generated)
 ├── combine.js              # Combine script
 ├── generator.js            # Transform script (with --full flag support)
 ├── generate_template.js    # Template generator
-├── generate_fan_only_temps.js  # Fan-only temp generator
 └── readme.md              # This file
 ```
 
 ## Metadata Fields (with `--full` flag)
 
-When using the `--full` flag, the following metadata is included:
+When using the `--full` flag, the following hardcoded metadata is included:
 
 - **manufacturer**: "Daikin"
 - **supportedModels**: ["ftkc20tvm4"]
