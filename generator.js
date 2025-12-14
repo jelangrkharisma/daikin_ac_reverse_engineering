@@ -79,13 +79,13 @@ function transformJSON(inputData, includeMetadata = false) {
       ],
       swingModes: [
         "on",
-        "comfort",
-        "off",
         "on_power_saving",
-        "comfort_power_saving",
-        "off_power_saving",
         "on_power_saving_plus",
+        "comfort",
+        "comfort_power_saving",
         "comfort_power_saving_plus",
+        "off",
+        "off_power_saving",
         "off_power_saving_plus"
       ],
       commands: {}
@@ -96,25 +96,46 @@ function transformJSON(inputData, includeMetadata = false) {
     };
   }
   
+  // Separate off commands and regular commands
+  const offCommands = {};
+  const regularCommands = {};
+  
   // Process each key-value pair in the input
   for (const [key, value] of Object.entries(inputData)) {
-    const normalized = normalizeKey(key);
+    // Handle simple "off" command - just "off" as key
+    if (key === "off") {
+      offCommands.off = value;
+      continue;
+    }
+    
+    // Try to normalize the key - if it fails, skip it
+    let normalized;
+    try {
+      normalized = normalizeKey(key);
+    } catch (error) {
+      console.warn(`Skipping invalid key format: ${key}`);
+      continue;
+    }
     
     // Build the nested structure: commands.operatingMode.fanMode.swingMode.temperature
-    if (!output.commands[normalized.operatingMode]) {
-      output.commands[normalized.operatingMode] = {};
+    if (!regularCommands[normalized.operatingMode]) {
+      regularCommands[normalized.operatingMode] = {};
     }
     
-    if (!output.commands[normalized.operatingMode][normalized.fanMode]) {
-      output.commands[normalized.operatingMode][normalized.fanMode] = {};
+    if (!regularCommands[normalized.operatingMode][normalized.fanMode]) {
+      regularCommands[normalized.operatingMode][normalized.fanMode] = {};
     }
     
-    if (!output.commands[normalized.operatingMode][normalized.fanMode][normalized.swingMode]) {
-      output.commands[normalized.operatingMode][normalized.fanMode][normalized.swingMode] = {};
+    if (!regularCommands[normalized.operatingMode][normalized.fanMode][normalized.swingMode]) {
+      regularCommands[normalized.operatingMode][normalized.fanMode][normalized.swingMode] = {};
     }
     
-    output.commands[normalized.operatingMode][normalized.fanMode][normalized.swingMode][normalized.temperature] = value;
+    regularCommands[normalized.operatingMode][normalized.fanMode][normalized.swingMode][normalized.temperature] = value;
   }
+  
+  // Merge commands: off first, then regular commands
+  // This ensures "off" is always on top
+  output.commands = { ...offCommands, ...regularCommands };
   
   return output;
 }
