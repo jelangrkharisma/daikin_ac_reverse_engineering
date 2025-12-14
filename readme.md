@@ -23,8 +23,35 @@ operatingMode.swingMode.fanMode.json
 ```
 
 ### Output Format (transformed files)
+
+**Without `--full` flag:**
 ```json
 {
+  "commands": {
+    "operatingMode": {
+      "fanMode": {
+        "swingMode": {
+          "temperature": "IR Command Base64"
+        }
+      }
+    }
+  }
+}
+```
+
+**With `--full` flag (includes metadata):**
+```json
+{
+  "manufacturer": "Daikin",
+  "supportedModels": ["ftkc20tvm4"],
+  "commandsEncoding": "Base64",
+  "supportedController": "Broadlink",
+  "minTemperature": 16,
+  "maxTemperature": 32,
+  "precision": 0.5,
+  "operationModes": ["dry", "cool", "fan_only"],
+  "fanModes": ["auto", "night", "level1", ...],
+  "swingModes": ["on", "comfort", "off", ...],
   "commands": {
     "operatingMode": {
       "fanMode": {
@@ -133,16 +160,25 @@ Transforms JSON files from input format to target format. Converts flat key-valu
 
 **Usage:**
 ```bash
-node generator.js <input-file> [output-file]
+node generator.js [input-file] [output-file] [--full]
 ```
 
 **Examples:**
 ```bash
-# Auto-generate output filename
+# Basic usage - auto-generate output filename
 node generator.js combined.json
 
 # Specify output file
 node generator.js combined.json result/transformed.json
+
+# Full mode - automatically combines src/ and includes metadata
+node generator.js --full
+
+# Full mode with custom directory
+node generator.js src --full
+
+# Full mode with custom input file and output
+node generator.js combined.json result/ftkc20tvm4.json --full
 ```
 
 **What it does:**
@@ -152,12 +188,23 @@ node generator.js combined.json result/transformed.json
 - Writes transformed JSON to output file
 - If output file is not specified, creates `input-filename.transformed.json` in the same directory
 
+**`--full` flag behavior:**
+- **Automatically combines** all JSON files from `src/` directory (or specified directory)
+- **Includes metadata** at the top of the output JSON:
+  - `manufacturer`, `supportedModels`, `commandsEncoding`, `supportedController`
+  - `minTemperature`, `maxTemperature`, `precision`
+  - `operationModes`, `fanModes`, `swingModes` arrays
+- **Default output**: `result/ftkc20tvm4.json` when `--full` is used
+- When no input is provided with `--full`, automatically uses `src/` directory
+
 **Key Format:**
 - Input: `"operatingMode-swingMode-fanMode-temperature"`
 - Example: `"cool-on-auto_quiet-16"`
 - Output: `commands.cool.auto_quiet.on.16`
 
 ## Workflow
+
+### Standard Workflow
 
 1. **Generate templates** (if needed):
    ```bash
@@ -181,6 +228,33 @@ node generator.js combined.json result/transformed.json
    node generator.js combined.json result/transformed.json
    ```
 
+### Quick Workflow (with `--full` flag)
+
+The `--full` flag automates steps 4 and 5, and includes metadata:
+
+1. **Generate templates** (if needed):
+   ```bash
+   node generate_template.js cool on auto
+   ```
+
+2. **Fill in IR commands** in the generated JSON files in `src/` directory
+
+3. **Generate temperature variations** for fan_only mode:
+   ```bash
+   node generate_fan_only_temps.js
+   ```
+
+4. **Generate final output with metadata** (automatically combines and transforms):
+   ```bash
+   node generator.js --full
+   ```
+   
+   This single command will:
+   - Combine all JSON files from `src/` directory
+   - Transform to nested structure
+   - Include all metadata fields
+   - Output to `result/ftkc20tvm4.json`
+
 ## Directory Structure
 
 ```
@@ -191,11 +265,27 @@ daikin/
 │   ├── fan_only.json
 │   └── ...
 ├── result/                 # Transformed output files
-│   └── transformed.json
-├── combined.json           # Combined source files
+│   ├── transformed.json
+│   └── ftkc20tvm4.json    # Full output with metadata (generated with --full)
+├── combined.json           # Combined source files (auto-generated)
 ├── combine.js              # Combine script
-├── generator.js            # Transform script
+├── generator.js            # Transform script (with --full flag support)
 ├── generate_template.js    # Template generator
 ├── generate_fan_only_temps.js  # Fan-only temp generator
 └── readme.md              # This file
 ```
+
+## Metadata Fields (with `--full` flag)
+
+When using the `--full` flag, the following metadata is included:
+
+- **manufacturer**: "Daikin"
+- **supportedModels**: ["ftkc20tvm4"]
+- **commandsEncoding**: "Base64"
+- **supportedController**: "Broadlink"
+- **minTemperature**: 16
+- **maxTemperature**: 32
+- **precision**: 0.5
+- **operationModes**: ["dry", "cool", "fan_only"]
+- **fanModes**: ["auto", "night", "level1", "level2", "level3", "level4", "level5", "auto_quiet", "night_quiet", "level1_quiet", "level2_quiet", "level3_quiet", "level4_quiet", "level5_quiet"]
+- **swingModes**: ["on", "comfort", "off", "on_power_saving", "comfort_power_saving", "off_power_saving", "on_power_saving_plus", "comfort_power_saving_plus", "off_power_saving_plus"]

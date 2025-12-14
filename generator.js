@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { combineJSONFiles } = require('./combine.js');
 
 /**
  * Normalize and transform JSON files from input format to target format
@@ -40,10 +41,60 @@ function normalizeKey(key) {
   };
 }
 
-function transformJSON(inputData) {
-  const output = {
-    commands: {}
-  };
+function transformJSON(inputData, includeMetadata = false) {
+  // Create output object with metadata first (if --full flag is provided)
+  let output;
+  
+  if (includeMetadata) {
+    output = {
+      manufacturer: "Daikin",
+      supportedModels: [
+        "ftkc20tvm4"
+      ],
+      commandsEncoding: "Base64",
+      supportedController: "Broadlink",
+      minTemperature: 16,
+      maxTemperature: 32,
+      precision: 0.5,
+      operationModes: [
+        "dry",
+        "cool",
+        "fan_only"
+      ],
+      fanModes: [
+        "auto",
+        "night",
+        "level1",
+        "level2",
+        "level3",
+        "level4",
+        "level5",
+        "auto_quiet",
+        "night_quiet",
+        "level1_quiet",
+        "level2_quiet",
+        "level3_quiet",
+        "level4_quiet",
+        "level5_quiet"
+      ],
+      swingModes: [
+        "on",
+        "comfort",
+        "off",
+        "on_power_saving",
+        "comfort_power_saving",
+        "off_power_saving",
+        "on_power_saving_plus",
+        "comfort_power_saving_plus",
+        "off_power_saving_plus"
+      ],
+      commands: {}
+    };
+  } else {
+    output = {
+      commands: {}
+    };
+  }
   
   // Process each key-value pair in the input
   for (const [key, value] of Object.entries(inputData)) {
@@ -68,7 +119,7 @@ function transformJSON(inputData) {
   return output;
 }
 
-function processFile(inputPath, outputPath) {
+function processFile(inputPath, outputPath, includeMetadata = false) {
   try {
     // Read input file
     const inputData = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
@@ -76,13 +127,17 @@ function processFile(inputPath, outputPath) {
     console.log(`Processing: ${inputPath}`);
     
     // Transform the JSON (all info extracted from keys)
-    const outputData = transformJSON(inputData);
+    const outputData = transformJSON(inputData, includeMetadata);
     
     // Write output file
     fs.writeFileSync(outputPath, JSON.stringify(outputData, null, 2), 'utf8');
     
     console.log(`  ✓ Successfully wrote: ${outputPath}`);
-    console.log(`  ✓ Processed ${Object.keys(inputData).length} commands\n`);
+    console.log(`  ✓ Processed ${Object.keys(inputData).length} commands`);
+    if (includeMetadata) {
+      console.log(`  ✓ Included metadata (--full mode)`);
+    }
+    console.log();
     
   } catch (error) {
     console.error(`Error processing ${inputPath}:`, error.message);
@@ -94,20 +149,62 @@ function processFile(inputPath, outputPath) {
 function main() {
   const args = process.argv.slice(2);
   
-  if (args.length < 1) {
-    console.error('Usage: node generator.js <input-file> [output-file]');
-    console.error('  If output-file is not provided, it will be generated from input filename');
-    process.exit(1);
-  }
+  // Check for --full flag
+  const includeMetadata = args.includes('--full');
+  const filteredArgs = args.filter(arg => arg !== '--full');
   
-  const inputPath = args[0];
-  let outputPath = args[1];
+  let inputPath;
+  let outputPath;
   
-  // Generate output path if not provided
-  if (!outputPath) {
-    const dir = path.dirname(inputPath);
-    const basename = path.basename(inputPath, '.json');
-    outputPath = path.join(dir, `${basename}.transformed.json`);
+  // If --full is used, automatically combine files from src/ and use combined.json
+  if (includeMetadata) {
+    const combinedPath = path.join(__dirname, 'combined.json');
+    
+    // Determine input source
+    if (filteredArgs.length === 0) {
+      // No arguments: combine from src/ directory
+      const srcDir = path.join(__dirname, 'src');
+      console.log('Combining JSON files from src/ directory...\n');
+      combineJSONFiles(srcDir, combinedPath);
+      console.log();
+      inputPath = combinedPath;
+    } else {
+      const firstArg = filteredArgs[0];
+      // Check if first argument is a directory
+      const isDirectory = fs.existsSync(firstArg) && fs.statSync(firstArg).isDirectory();
+      
+      if (isDirectory) {
+        // Combine all JSON files from the specified directory
+        console.log(`Combining JSON files from ${firstArg}...\n`);
+        combineJSONFiles(firstArg, combinedPath);
+        console.log();
+        inputPath = combinedPath;
+      } else {
+        // Use provided input file directly
+        inputPath = firstArg;
+      }
+    }
+    
+    // Default output path for --full mode
+    outputPath = filteredArgs[1] || path.join(__dirname, 'result', 'ftkc20tvm4.json');
+  } else {
+    // Normal mode - require input file
+    if (filteredArgs.length < 1) {
+      console.error('Usage: node generator.js <input-file> [output-file] [--full]');
+      console.error('  If output-file is not provided, it will be generated from input filename');
+      console.error('  Use --full to include metadata and automatically combine files from src/');
+      process.exit(1);
+    }
+    
+    inputPath = filteredArgs[0];
+    outputPath = filteredArgs[1];
+    
+    // Generate output path if not provided
+    if (!outputPath) {
+      const dir = path.dirname(inputPath);
+      const basename = path.basename(inputPath, '.json');
+      outputPath = path.join(dir, `${basename}.transformed.json`);
+    }
   }
   
   // Ensure output directory exists
@@ -116,7 +213,7 @@ function main() {
     fs.mkdirSync(outputDir, { recursive: true });
   }
   
-  processFile(inputPath, outputPath);
+  processFile(inputPath, outputPath, includeMetadata);
 }
 
 // Run if executed directly
