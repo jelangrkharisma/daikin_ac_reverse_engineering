@@ -11,6 +11,19 @@ const path = require('path');
  */
 
 function generateTemplate(operatingMode, swingMode, fanMode) {
+  // Guard: Check if JSON file already exists in src directory before proceeding
+  const srcDir = path.join(__dirname, 'src');
+  const jsonFilename = `${operatingMode}.${swingMode}.${fanMode}.json`;
+  const jsonPath = path.join(srcDir, jsonFilename);
+  
+  if (fs.existsSync(jsonPath)) {
+    console.error(`\n❌ Aborted: JSON file already exists in src directory`);
+    console.error(`   File: ${jsonPath}`);
+    console.error(`   To prevent overwriting existing data, the operation was cancelled.`);
+    console.error(`   If you need to regenerate, please delete or rename the existing file first.\n`);
+    return null;
+  }
+  
   // Generate temperature values from 16 to 32 with 0.5 increments
   const temperatures = [];
   for (let temp = 16; temp <= 32; temp += 0.5) {
@@ -39,13 +52,10 @@ function generateTemplate(operatingMode, swingMode, fanMode) {
   fs.writeFileSync(outputPath, content, 'utf8');
   
   // Create empty JSON file in src directory
-  const srcDir = path.join(__dirname, 'src');
   if (!fs.existsSync(srcDir)) {
     fs.mkdirSync(srcDir, { recursive: true });
   }
   
-  const jsonFilename = `${operatingMode}.${swingMode}.${fanMode}.json`;
-  const jsonPath = path.join(srcDir, jsonFilename);
   const emptyJson = {};
   fs.writeFileSync(jsonPath, JSON.stringify(emptyJson, null, 2) + '\n', 'utf8');
   
@@ -97,7 +107,10 @@ function main() {
   const swingMode = args[1];
   const fanMode = args[2];
   
-  generateTemplate(operatingMode, swingMode, fanMode);
+  const result = generateTemplate(operatingMode, swingMode, fanMode);
+  if (result === null) {
+    process.exit(1);
+  }
 }
 
 // Run if executed directly
