@@ -5,6 +5,7 @@ This project contains scripts to generate, combine, and transform Daikin IR comm
 ## File Naming Convention
 
 **Source files (in `src/` directory):**
+
 ```
 operatingMode.swingMode.fanMode.json
 ```
@@ -14,6 +15,7 @@ operatingMode.swingMode.fanMode.json
 ## JSON Structure
 
 ### Input Format (source files)
+
 ```json
 {
   "operatingMode-swingMode-fanMode-temperature": "IR Command Base64",
@@ -25,6 +27,7 @@ operatingMode.swingMode.fanMode.json
 ### Output Format (transformed files)
 
 **Without `--full` flag:**
+
 ```json
 {
   "commands": {
@@ -40,6 +43,7 @@ operatingMode.swingMode.fanMode.json
 ```
 
 **With `--full` flag (includes metadata):**
+
 ```json
 {
   "manufacturer": "Daikin",
@@ -65,6 +69,7 @@ operatingMode.swingMode.fanMode.json
 ```
 
 **Example:**
+
 ```json
 {
   "commands": {
@@ -87,17 +92,20 @@ operatingMode.swingMode.fanMode.json
 Generates template keys for JSON objects and creates empty JSON files in the `src/` directory.
 
 **Usage:**
+
 ```bash
 node generate_template.js <operatingMode> <swingMode> <fanMode>
 ```
 
 **Examples:**
+
 ```bash
 node generate_template.js cool on_power_saving night_quiet
 node generate_template.js cool on auto
 ```
 
 **What it does:**
+
 - Generates temperature keys from 16 to 32 (0.5 increments)
 - Creates a template text file in `operatingMode/operatingMode.swingMode.fanMode.txt`
 - Creates an empty JSON file in `src/operatingMode.swingMode.fanMode.json`
@@ -108,11 +116,13 @@ node generate_template.js cool on auto
 Combines and flattens all JSON files from the `src/` directory into one combined JSON file.
 
 **Usage:**
+
 ```bash
 node combine.js [src-directory] [output-file]
 ```
 
 **Examples:**
+
 ```bash
 # Use defaults (src/ -> combined.json)
 node combine.js
@@ -122,6 +132,7 @@ node combine.js src output/combined.json
 ```
 
 **What it does:**
+
 - Reads all `.json` files from the source directory (default: `src/`)
 - Merges all key-value pairs into a single flat object
 - Writes the result to the output file (default: `combined.json`)
@@ -132,11 +143,13 @@ node combine.js src output/combined.json
 Transforms JSON files from input format to target format. Converts flat key-value pairs into nested structure.
 
 **Usage:**
+
 ```bash
 node generator.js [input-file] [output-file] [--full]
 ```
 
 **Examples:**
+
 ```bash
 # Basic usage - auto-generate output filename
 node generator.js combined.json
@@ -155,6 +168,7 @@ node generator.js combined.json result/ftkc20tvm4.json --full
 ```
 
 **What it does:**
+
 - Reads input JSON file with flat keys (e.g., `"cool-on-auto_quiet-16"`)
 - Parses keys to extract: operatingMode, swingMode, fanMode, temperature
 - Transforms into nested structure: `commands.operatingMode.fanMode.swingMode.temperature`
@@ -162,6 +176,7 @@ node generator.js combined.json result/ftkc20tvm4.json --full
 - If output file is not specified, creates `input-filename.transformed.json` in the same directory
 
 **`--full` flag behavior:**
+
 - **Automatically combines** all JSON files from `src/` directory (or specified directory)
 - **Includes metadata** at the top of the output JSON:
   - `manufacturer`, `supportedModels`, `commandsEncoding`, `supportedController`
@@ -171,6 +186,7 @@ node generator.js combined.json result/ftkc20tvm4.json --full
 - When no input is provided with `--full`, automatically uses `src/` directory
 
 **Key Format:**
+
 - Input: `"operatingMode-swingMode-fanMode-temperature"`
 - Example: `"cool-on-auto_quiet-16"`
 - Output: `commands.cool.auto_quiet.on.16`
@@ -180,6 +196,7 @@ node generator.js combined.json result/ftkc20tvm4.json --full
 ### Standard Workflow
 
 1. **Generate templates** (if needed):
+
    ```bash
    node generate_template.js cool on auto
    ```
@@ -187,11 +204,13 @@ node generator.js combined.json result/ftkc20tvm4.json --full
 2. **Fill in IR commands** in the generated JSON files in `src/` directory
 
 3. **Generate temperature variations** for fan_only mode:
+
    ```bash
    node generate_fan_only_temps.js
    ```
 
 4. **Combine all source files**:
+
    ```bash
    node combine.js
    ```
@@ -206,6 +225,7 @@ node generator.js combined.json result/ftkc20tvm4.json --full
 The `--full` flag automates steps 4 and 5, and includes metadata:
 
 1. **Generate templates** (if needed):
+
    ```bash
    node generate_template.js cool on auto
    ```
@@ -213,15 +233,17 @@ The `--full` flag automates steps 4 and 5, and includes metadata:
 2. **Fill in IR commands** in the generated JSON files in `src/` directory
 
 3. **Generate temperature variations** for fan_only mode:
+
    ```bash
    node generate_fan_only_temps.js
    ```
 
 4. **Generate final output with metadata** (automatically combines and transforms):
+
    ```bash
    node generator.js --full
    ```
-   
+
    This single command will:
    - Combine all JSON files from `src/` directory
    - Transform to nested structure
