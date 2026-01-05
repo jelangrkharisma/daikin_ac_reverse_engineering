@@ -10,7 +10,7 @@ const path = require("path");
  * Output saved to: operatingMode/operatingMode.swingMode.fanMode.txt
  */
 
-function generateTemplate(operatingMode, swingMode, fanMode) {
+function generateTemplate(operatingMode, swingMode, fanMode, reverse = false) {
   // Guard: Check if JSON file already exists in src directory before proceeding
   const srcDir = path.join(__dirname, "src");
   const jsonFilename = `${operatingMode}.${swingMode}.${fanMode}.json`;
@@ -34,6 +34,11 @@ function generateTemplate(operatingMode, swingMode, fanMode) {
     // Format to avoid floating point precision issues
     const formattedTemp = temp % 1 === 0 ? temp.toString() : temp.toFixed(1);
     temperatures.push(formattedTemp);
+  }
+
+  // Reverse temperatures if reverse flag is set
+  if (reverse) {
+    temperatures.reverse();
   }
 
   // Generate template keys
@@ -74,7 +79,10 @@ function generateTemplate(operatingMode, swingMode, fanMode) {
   console.log(`  Operating Mode: ${operatingMode}`);
   console.log(`  Swing Mode: ${swingMode}`);
   console.log(`  Fan Mode: ${fanMode}`);
-  console.log(`  Temperature range: 16 to 32 (0.5 increments)`);
+  console.log(`  Temperature range: ${reverse ? "32 to 16" : "16 to 32"} (0.5 increments)`);
+  if (reverse) {
+    console.log(`  Reverse order: enabled (32° first)`);
+  }
   console.log(`  Total keys: ${keys.length}`);
   if (hasPowerSaving) {
     console.log(`  Power Saving: enabled`);
@@ -100,24 +108,41 @@ function generateTemplate(operatingMode, swingMode, fanMode) {
 function main() {
   const args = process.argv.slice(2);
 
-  if (args.length < 3) {
+  // Parse flags
+  let reverse = false;
+  const positionalArgs = [];
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "-r" || args[i] === "--reverse") {
+      reverse = true;
+    } else {
+      positionalArgs.push(args[i]);
+    }
+  }
+
+  if (positionalArgs.length < 3) {
     console.error(
-      "Usage: node generate_template.js <operatingMode> <swingMode> <fanMode>",
+      "Usage: node generate_template.js [OPTIONS] <operatingMode> <swingMode> <fanMode>",
     );
+    console.error("");
+    console.error("Options:");
+    console.error("  -r, --reverse    Reverse temperature order (32° first)");
     console.error("");
     console.error("Example:");
     console.error(
       "  node generate_template.js cool on_power_saving night_quiet",
     );
     console.error("  node generate_template.js cool on auto");
+    console.error("  node generate_template.js -r cool on auto");
+    console.error("  node generate_template.js --reverse cool on auto");
     process.exit(1);
   }
 
-  const operatingMode = args[0];
-  const swingMode = args[1];
-  const fanMode = args[2];
+  const operatingMode = positionalArgs[0];
+  const swingMode = positionalArgs[1];
+  const fanMode = positionalArgs[2];
 
-  const result = generateTemplate(operatingMode, swingMode, fanMode);
+  const result = generateTemplate(operatingMode, swingMode, fanMode, reverse);
   if (result === null) {
     process.exit(1);
   }
