@@ -87,6 +87,43 @@ operatingMode.swingMode.fanMode.json
 
 ## Scripts
 
+### `daikin_arc480a48.js`
+
+Implements the Daikin 152-bit full-state frame using the same state layout and
+timing constants as IRremoteESP8266 `IRDaikin152`.
+
+Decode one of the existing Broadlink sample captures:
+
+```bash
+node daikin_arc480a48.js decode src/cool.on.auto.json cool-on-auto-24
+```
+
+Generate a Broadlink base64 packet from a full state:
+
+```bash
+node daikin_arc480a48.js encode '{"mode":"cool","power":true,"temperature":24.5,"fanMode":"level5","swing":true,"quiet":true,"powerSavingMode":"econo"}'
+```
+
+Generate every supported local state into one flat JSON file:
+
+```bash
+node generate_daikin_arc480a48_states.js
+node generate_daikin_arc480a48_states.js result/custom.json
+```
+
+Supported state fields:
+
+- `mode`: `cool`, `dry`, `fan_only`
+- `power`: `true`, `false`, or `"off"`
+- `temperature`: `16..32` in `0.5C` increments for cool mode
+- `fanMode`: `level1`..`level5`, `auto`, `night`
+- `swing`: boolean vertical swing
+- `quiet`, `comfort`, `powerful`, `sensor`: booleans
+- `powerSavingMode`: `none`, `econo`, `econo_plus`
+
+`IRDaikin152` does not define a mold-proof bit in its 19-byte state frame, so
+the helper rejects `mold: true` instead of inventing an unknown command.
+
 ### 1. `generate_template.js`
 
 Generates template keys for JSON objects and creates empty JSON files in the `src/` directory.
